@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		font-family: Monospace;
+		font-size: 20px;
+		padding: 5px;
+		text-align: center;
+		color: #ffffff
+	}
+	a {color: purple}
+
+</style>
+</head>
+
+<body> 
+<div id = "info"> 
+     <br/>Object hierarchy test <br/>
+	 press "P" to pause the animation <br/>
+	 BGM Sound (<a href="javascript:toggle();">On/Off</a>)
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+
+
+<audio id="soundtrack" autoplay loop style="display:none">
+<source src="sounds/The Mass.mp3" type='audio/mp3'>
+</audio>
+
+<script> 
+var renderer, sun, earth, angle = 0, angleS = 0,
+    angle2 = 0, angle2S = 0, angle2S2 = 0, clock, control;
+
+var keyboard = new KeyboardState(), pause=1;
+var musicPaused = true, soundTrack, soundVal = 1.0, sign = 1.0;
+var camera, scene;
+var sceneBack, cameraBack;
+
+var lighton = true, turn = true;
+
+init();
+animate();
+keyBoardUpdate();
+toggle();//for mouse press
+
+function toggle() {
+	musicPaused = !musicPaused;
+	sign = musicPaused ? -1 : 1;
+	console.log (musicPaused);
+}
+
+function init() {
+    clock = new THREE.Clock();
+	soundTrack = document.getElementById ('soundtrack');
+	
+	//back scene//////////////////////////
+	sceneBack = new THREE.Scene();
+    cameraBack = new THREE.OrthographicCamera(-10, 10, 10, -10, 1, 100);
+    cameraBack.position.z = 5;
+    cameraBack.lookAt(new THREE.Vector3(0, 0, 0));
+
+    THREE.ImageUtils.crossOrigin = '';//what this line doing?
+    var texture = THREE.ImageUtils.loadTexture('images/space.jpg');
+
+    var back = new THREE.Mesh(new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 1.0//0.315
+    }));
+    back.material.depthTest = false;
+    back.material.depthWrite = false;
+    sceneBack.add(back);
+	
+	
+	//end back scene///////////////////////////////////////////////
+	
+	
+    scene = new THREE.Scene();	
+    camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.y = 100;
+    camera.position.z = 200;
+    
+    scene.add(camera);
+
+	
+	//sun
+    sun = new THREE.Mesh(new THREE.SphereGeometry(30,20,20),
+    new THREE.MeshBasicMaterial ({ 
+		map: new THREE.ImageUtils.loadTexture ('images/sun.jpg'),
+        //wireframe: true
+    }));
+
+	//earth
+    earth = new THREE.Mesh(new THREE.SphereGeometry(10,20,20),
+    new THREE.MeshLambertMaterial ({
+		map: new THREE.ImageUtils.loadTexture ('images/earth.jpg'),
+        //wireframe: true
+    }));
+	
+	//moon
+    moon = new THREE.Mesh(new THREE.SphereGeometry(3,20,20),
+    new THREE.MeshLambertMaterial ({
+		map: new THREE.ImageUtils.loadTexture ('images/moon.jpg'),
+        //wireframe: true
+    }));
+    
+    //very important
+    //there are Kinematics of Hiearchical Structure
+    //every objest`s frame are base on it`s father
+    //if not father, it base on warld frame
+    earth.add(moon);
+    sun.add(earth);
+    scene.add(sun);
+
+	/*
+    var gridXZ = new THREE.GridHelper(100, 10);
+    gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
+    scene.add(gridXZ);
+	*/
+
+    light = new THREE.PointLight(0xffffff,3);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x888888);
+	
+	renderer.autoClear = false;//because muti-pass rander, we handling the clear time!
+
+    control = new THREE.OrbitControls(camera, renderer.domElement);
+    document.body.appendChild(renderer.domElement);
+    window.addEventListener('resize', onWindowResize, false);
+	
+	//console.log("test");  
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate() {
+
+	//for sound control
+	soundVal += sign*0.01;
+	soundVal = THREE.Math.clamp (soundVal, 0, 1);
+	soundtrack.volume = soundVal;
+	
+    control.update();
+    requestAnimationFrame(animate);
+    render();
+	keyBoardUpdate();
+}
+
+/*note! the frame are base on it`s father or world frame(no father)*/
+function render() {
+    //et the seconds passed since the clock started.
+    //angle = clock.getElapsedTime();
+    
+	if(pause){
+			
+		//Get the seconds passed since the last call to this method.
+		angle += (clock.getDelta() * 6)*3.14/180.0;
+		angleS+= angle * 365.0;
+		
+		angle2 = angle * 12 - angleS;
+		angle2S= angle * 12;
+		
+		angle2S2 += angle * 12; 
+
+	}else{
+		clock.stop();
+	}
+	
+    earth.position.set(80 * Math.cos(angle), 0, -80 * Math.sin(angle));
+    earth.rotation.y = angleS;
+   
+    moon.position.set(20 * Math.cos(angle2), 0, -20 * Math.sin(angle2));
+    moon.rotation.y = angle2S;
+	
+
+    
+    renderer.clear();//clear at this time! then sceneback and scene will both appear
+    renderer.render(sceneBack, cameraBack);
+    renderer.render(scene, camera);
+}
+
+function keyBoardUpdate() {
+
+	keyboard.update();
+	
+	if ( keyboard.down("P"))  // yes, must use UPPER CASE
+		pause = !pause;         
+
+
+
+}
+</script>
+</body>
+
+</html>
