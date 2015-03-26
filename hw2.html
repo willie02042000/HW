@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+#info {
+    position: absolute;
+    top: 0px;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    color: #ff0000
+}
+a {
+    color: #ffff00
+}
+
+
+</style>
+</head>
+
+<body> 
+<div id="info">bumpMap, object frame, sound effect practice
+    <br/> <a href="javascript:Toggle();">Open/Close the door </a>
+    
+</div>
+
+
+<audio id="soundtrack" autoplay loop style="display:none">
+<source src="http://willie02042000.github.io/HW/sounds/empty.mp3" type='audio/mp3'>
+</audio>
+   
+<audio id="openSound" style="display:none">
+<source src="http://willie02042000.github.io/HW/sounds/doorOpen.mp3" type='audio/mp3'>
+</audio>
+ 
+<audio id="closeSound" style="display:none">
+<source src="http://willie02042000.github.io/HW/sounds/doorClose.mp3" type='audio/mp3'>
+</audio>
+    
+<script src="//cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js">
+</script>
+
+
+<script> 
+var camera, scene, renderer, light, controls;
+var doorFrame,door;//frame practice -> this is frame`s name
+                    //use frame can move whole object`s. Convenience
+var angle=0, doorOpen=0;
+var soundTrack, openSound, closeSound;
+
+init();
+animate();
+Toggle();
+//why toggle will auto do onec at begin
+function Toggle() {
+    
+    if(doorOpen==0) openSound.play();
+    if(doorOpen==1) closeSound.play();
+    doorOpen = !doorOpen;
+    
+    console.log (doorOpen);
+}
+
+
+function init() {
+
+    scene = new THREE.Scene();
+
+    soundTrack = document.getElementById ('soundtrack');
+    openSound = document.getElementById ('openSound');
+    closeSound = document.getElementById ('closeSound');
+    
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+    
+    camera.position.y = 200;
+    camera.position.z = 200;
+    //camera.up = new THREE.Vector3(0,1,0);
+    camera.lookAt(new THREE.Vector3(0,40,0));
+    
+    scene.add(camera);
+
+    //texture and bump map setting
+    THREE.ImageUtils.crossOrigin = '';
+    var doorTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/wood.jpg');
+    var doorBumpTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/bumpMap/woodBumpMap.jpg');
+    
+    var doorFrameTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/blackIron.jpg');
+    var doorFrameBumpTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/bumpMap/blackIronBumpMap.jpg');
+    
+    var doorHandleTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/copper.jpg');
+    
+    var wallTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/waterModeWall.jpg');
+    var wallBumpTex = THREE.ImageUtils.loadTexture('http://willie02042000.github.io/HW/images/material/bumpMap/waterModeWallBumpMap.jpg');
+    
+    
+    doorFrame = new THREE.Object3D();
+    door      = new THREE.Object3D();
+    wall      = new THREE.Object3D();
+    scene.add(doorFrame);
+    scene.add(door);
+    scene.add(wall);
+
+    //door frame setting
+    columnGeom = new THREE.BoxGeometry(5, 90, 10);
+    downPlatformGeom = new THREE.BoxGeometry(40, 2.5, 10);
+    upPlatformGeom = new THREE.BoxGeometry(40, 5, 10);
+    material = new THREE.MeshLambertMaterial();
+    var doorFrameMaterial = new THREE.MeshPhongMaterial({
+            map: doorFrameTex,
+            //color: 0xf6c4df,
+            bumpMap: doorFrameBumpTex,
+            bumpScale: 0.8,
+            side: THREE.DoubleSide
+    });
+    
+    
+  
+    var leftMesh = new THREE.Mesh(columnGeom,doorFrameMaterial);
+    leftMesh.doubleSided=true;  
+    var rightMesh = leftMesh.clone();  
+    var downMesh = new THREE.Mesh(downPlatformGeom,doorFrameMaterial);
+    downMesh.doubleSided=true;    
+    var upMesh = new THREE.Mesh(upPlatformGeom,doorFrameMaterial);
+    upMesh.doubleSided=true;
+ 
+    leftMesh.position.set(     2.5, 45, -5);
+    rightMesh.position.set(45+ 2.5, 45, -5);
+    downMesh.position.set(25,   1.25, -5);
+    upMesh.position.set  (25, 90-2.5, -5);    
+    doorFrame.add(leftMesh);
+    doorFrame.add(rightMesh);
+    doorFrame.add(downMesh);
+    doorFrame.add(upMesh);
+
+    //door setting
+    doorBodyGeom = new THREE.BoxGeometry(40, 82.5, 5);
+    doorHandleGeom = new THREE.SphereGeometry( 3, 20, 20 );
+    handleLinkGeom = new THREE.CylinderGeometry( 1, 1, 5, 20 );
+    doorLinkGeom = new THREE.CylinderGeometry( 1, 1, 10, 20 );
+    doorMaterial = new THREE.MeshLambertMaterial();   
+    var doorBodyMaterial = new THREE.MeshPhongMaterial({
+            map: doorTex,
+            //color: 0xf6c4df,
+            bumpMap: doorBumpTex,
+            bumpScale: 0.8,
+            side: THREE.DoubleSide
+    });
+    
+    var doorHandleMaterial = new THREE.MeshPhongMaterial({
+            map: doorHandleTex,
+            //color: 0xf6c4df,
+            //bumpMap: doorFrameBumpTex,
+            //bumpScale: 0.8,
+            side: THREE.DoubleSide
+    });
+    
+    var doorBodyMesh = new THREE.Mesh(doorBodyGeom,doorBodyMaterial);
+    doorBodyMesh.doubleSided=true;  
+    var doorHandleMesh = new THREE.Mesh(doorHandleGeom, doorFrameMaterial);
+    doorHandleMesh.doubleSided=true;  
+    var handleLinkMesh = new THREE.Mesh(handleLinkGeom, doorHandleMaterial);
+    handleLinkMesh.doubleSided=true;
+    var upDoorLinkMesh = new THREE.Mesh(doorLinkGeom, doorHandleMaterial);
+    upDoorLinkMesh.doubleSided=true;
+    var downDoorLinkMesh = upDoorLinkMesh.clone();
+   
+    doorBodyMesh.position.set( -20, 43.75, -2.5);
+    doorHandleMesh.position.set(-35, 40, 4);
+    handleLinkMesh.rotation.set(90*3.14/180,0,0);
+    handleLinkMesh.position.set(-35, 40, 0);
+    upDoorLinkMesh.position.set(0, 70, 0.0);
+    downDoorLinkMesh.position.set(0, 20, 0.0); 
+    
+    door.add(doorBodyMesh);
+    door.add(doorHandleMesh);
+    door.add(handleLinkMesh);
+    door.add(upDoorLinkMesh);
+    door.add(downDoorLinkMesh);       
+    door.position.set(45,0,0);
+    
+    //wall
+    leftWallGeom = new THREE.BoxGeometry(100, 90, 10);
+    rightWallGeom = new THREE.BoxGeometry(50, 90, 10);
+    upWallGeom = new THREE.BoxGeometry(200,20, 10);
+
+    var wallMaterial = new THREE.MeshPhongMaterial({
+            map: wallTex,
+            //color: 0xf6c4df,
+            bumpMap: wallBumpTex,
+            bumpScale: 0.8,
+            side: THREE.DoubleSide
+    });
+    
+    var leftWallGeomMesh = new THREE.Mesh(leftWallGeom, wallMaterial);
+    leftWallGeomMesh.doubleSided=true;
+    var rightWallGeomtMesh = new THREE.Mesh(rightWallGeom, wallMaterial);
+    rightWallGeomtMesh.doubleSided=true;
+    var upWallGeomMesh = new THREE.Mesh(upWallGeom, wallMaterial);
+    upWallGeomMesh.doubleSided=true;
+    
+    leftWallGeomMesh.position.set  (-50, 45, -5);
+    rightWallGeomtMesh.position.set( 75, 45, -5);
+    upWallGeomMesh.position.set    (  0, 100, -5);
+     
+    wall.add(leftWallGeomMesh);
+    wall.add(rightWallGeomtMesh);
+    wall.add(upWallGeomMesh);
+
+    
+    //light setting    
+    
+    var ambiLight = new THREE.AmbientLight(0x242424)
+        scene.add(ambiLight);
+    
+    light = new THREE.PointLight(0xffffff);
+    light.position.set(100, 300, 200);
+    scene.add(light);
+
+    var gridXZ = new THREE.GridHelper(100, 10);
+    gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
+    scene.add(gridXZ);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xcccccc);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    document.body.appendChild(renderer.domElement);
+
+}
+
+function animate() {
+    controls.update();
+    
+   
+    requestAnimationFrame(animate);
+    render();
+}
+
+function render() {
+    
+    //angle+= 0.05;
+    //doorFrame.rotation.y += 0.05;
+    //door.rotation.y +=0.05;
+    //door.rotateOnAxis (1,0,0, angle)//why this not use?
+    
+     if(doorOpen==1 && angle<90*3.14/180){
+         angle+= 0.02;
+        door.rotation.y+=0.02;
+    }
+    
+    if(doorOpen==0 && angle>1*3.14/180){
+        angle-= 0.02
+        door.rotation.y-=0.02;
+
+    }
+    
+    
+    renderer.render(scene, camera);
+}
+</script>
+
+
+</body>
+
+</html>
